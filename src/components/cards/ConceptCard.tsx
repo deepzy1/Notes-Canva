@@ -1,5 +1,5 @@
-import React from 'react';
-import { Gem, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Gem, Plus, X } from 'lucide-react';
 import { AccentColor } from '../../types/canvas';
 
 interface ConceptCardProps {
@@ -8,6 +8,7 @@ interface ConceptCardProps {
   content: string;
   tags?: string[];
   accent?: AccentColor;
+  onUpdate?: (updated: { title?: string; content?: string; tags?: string[] }) => void;
 }
 
 const BADGE_COLOR_MAP: Record<AccentColor, string> = {
@@ -27,30 +28,78 @@ export const ConceptCard: React.FC<ConceptCardProps> = ({
   content,
   tags = ['Easy to learn', 'Versatile', 'Large community'],
   accent = 'pink',
+  onUpdate,
 }) => {
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [localTitle, setLocalTitle] = useState(title);
+  const [localContent, setLocalContent] = useState(content);
+
   const badgeStyle = BADGE_COLOR_MAP[accent] || 'bg-pink-500 text-white';
+
+  const saveTitle = () => {
+    setIsEditingTitle(false);
+    if (onUpdate) onUpdate({ title: localTitle });
+  };
+
+  const saveContent = () => {
+    setIsEditingContent(false);
+    if (onUpdate) onUpdate({ content: localContent });
+  };
 
   return (
     <div className="space-y-3">
-      {/* Header with Number Badge */}
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2.5">
+        <div className="flex items-center space-x-2.5 flex-1 pr-2">
           <div
-            className={`w-6 h-6 rounded-lg ${badgeStyle} font-bold text-xs flex items-center justify-center shadow-xs`}
+            className={`w-6 h-6 rounded-lg ${badgeStyle} font-bold text-xs flex items-center justify-center shadow-xs flex-shrink-0`}
           >
             {badgeNumber}
           </div>
-          <h2 className="text-sm font-bold text-neutral-900 tracking-tight">
-            {title}
-          </h2>
+
+          {isEditingTitle ? (
+            <input
+              autoFocus
+              type="text"
+              value={localTitle}
+              onChange={e => setLocalTitle(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={e => e.key === 'Enter' && saveTitle()}
+              className="text-sm font-bold text-neutral-900 border border-purple-400 rounded px-1.5 py-0.5 outline-hidden w-full bg-white"
+            />
+          ) : (
+            <h2
+              onDoubleClick={() => setIsEditingTitle(true)}
+              className="text-sm font-bold text-neutral-900 tracking-tight cursor-text hover:text-purple-700 transition-colors"
+              title="Double-click to edit title"
+            >
+              {localTitle}
+            </h2>
+          )}
         </div>
-        <Gem className="w-4 h-4 text-pink-400" />
+        <Gem className="w-4 h-4 text-pink-400 flex-shrink-0" />
       </div>
 
-      {/* Description */}
-      <p className="text-xs text-neutral-600 leading-relaxed font-normal">
-        {content}
-      </p>
+      {/* Description / Content */}
+      {isEditingContent ? (
+        <textarea
+          autoFocus
+          rows={3}
+          value={localContent}
+          onChange={e => setLocalContent(e.target.value)}
+          onBlur={saveContent}
+          className="text-xs text-neutral-800 border border-purple-400 rounded-lg p-2 outline-hidden w-full bg-white resize-none"
+        />
+      ) : (
+        <p
+          onDoubleClick={() => setIsEditingContent(true)}
+          className="text-xs text-neutral-600 leading-relaxed font-normal cursor-text hover:bg-purple-50/40 p-1 rounded transition-colors"
+          title="Double-click to edit description"
+        >
+          {localContent}
+        </p>
+      )}
 
       {/* Tags */}
       {tags && tags.length > 0 && (

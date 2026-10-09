@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Connection, CanvasCardItem } from '../../types/canvas';
+import { Trash2 } from 'lucide-react';
 
 interface ConnectionLinesProps {
   connections: Connection[];
@@ -10,6 +11,8 @@ interface ConnectionLinesProps {
     currentX: number;
     currentY: number;
   } | null;
+  selectedConnectionId?: string | null;
+  onSelectConnection?: (connId: string | null) => void;
   onDeleteConnection?: (connId: string) => void;
 }
 
@@ -17,36 +20,43 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({
   connections,
   cards,
   pendingConnection,
+  selectedConnectionId,
+  onSelectConnection,
   onDeleteConnection,
 }) => {
-  // Map card positions for quick lookup
   const cardMap = new Map<string, CanvasCardItem>();
   cards.forEach(c => cardMap.set(c.id, c));
+
+  const [hoveredConnId, setHoveredConnId] = useState<string | null>(null);
 
   const getPortCoordinates = (
     card: CanvasCardItem,
     side: 'top' | 'right' | 'bottom' | 'left'
   ) => {
     const width = card.width || 280;
-    // Approximating card height based on type
-    let estimatedHeight = 160;
-    if (card.type === 'banner') estimatedHeight = 140;
-    else if (card.type === 'flowchart') estimatedHeight = 250;
-    else if (card.type === 'mindmap') estimatedHeight = 280;
-    else if (card.type === 'code') estimatedHeight = 220;
-    else if (card.type === 'datatypes') estimatedHeight = 240;
-    else if (card.type === 'tasks') estimatedHeight = 220;
-    else if (card.type === 'resources') estimatedHeight = 200;
+    let height = card.height;
+    if (typeof height !== 'number') {
+      if (card.type === 'banner') height = 140;
+      else if (card.type === 'flowchart') height = 260;
+      else if (card.type === 'mindmap') height = 280;
+      else if (card.type === 'code') height = 230;
+      else if (card.type === 'datatypes') height = 240;
+      else if (card.type === 'tasks') height = 230;
+      else if (card.type === 'resources') height = 200;
+      else if (card.type === 'shape') height = 120;
+      else if (card.type === 'text') height = 60;
+      else height = 170;
+    }
 
     switch (side) {
       case 'top':
         return { x: card.x + width / 2, y: card.y };
       case 'bottom':
-        return { x: card.x + width / 2, y: card.y + estimatedHeight };
+        return { x: card.x + width / 2, y: card.y + height };
       case 'left':
-        return { x: card.x, y: card.y + estimatedHeight / 2 };
+        return { x: card.x, y: card.y + height / 2 };
       case 'right':
-        return { x: card.x + width, y: card.y + estimatedHeight / 2 };
+        return { x: card.x + width, y: card.y + height / 2 };
     }
   };
 
@@ -56,11 +66,16 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({
     fromSide: string,
     x2: number,
     y2: number,
-    toSide: string
+    toSide: string,
+    style?: 'curved' | 'straight' | 'dashed'
   ) => {
+    if (style === 'straight') {
+      return `M ${x1} ${y1} L ${x2} ${y2}`;
+    }
+
     const dx = Math.abs(x2 - x1);
     const dy = Math.abs(y2 - y1);
-    const offset = Math.max(dx * 0.45, dy * 0.45, 50);
+    const offset = Math.max(dx * 0.45, dy * 0.45, 40);
 
     let cx1 = x1;
     let cy1 = y1;
@@ -81,10 +96,10 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({
   };
 
   return (
-    <svg className="absolute inset-0 w-[4000px] h-[4000px] pointer-events-none z-1 overflow-visible">
+    <svg className="absolute inset-0 w-[5000px] h-[5000px] pointer-events-none z-5 overflow-visible">
       <defs>
-        {/* Arrowhead markers */}
-        {['#f43f5e', '#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f97316', '#f59e0b', '#06b6d4'].map(
+        {/* Directional arrowhead markers */}
+        {['#f43f5e', '#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f97316', '#f59e0b', '#06b6d4', '#475569'].map(
           color => (
             <marker
               key={color}
@@ -102,7 +117,7 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({
         )}
       </defs>
 
-      {/* Render saved connections */}
+      {/* Render active connections */}
       {connections.map(conn => {
         const fromCard = cardMap.get(conn.fromId);
         const toCard = cardMap.get(conn.toId);
@@ -116,44 +131,88 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({
           conn.fromSide,
           end.x,
           end.y,
-          conn.toSide
+          conn.toSide,
+          conn.style
         );
 
         const strokeColor = conn.color || '#ec4899';
         const colorKey = strokeColor.replace('#', '');
+        const isSelected = selectedConnectionId === conn.id;
+        const isHovered = hoveredConnId === conn.id;
+
+        const midX = (start.x + end.x) / 2;
+        const midY = (start.y + end.y) / 2;
 
         return (
-          <g key={conn.id} className="group pointer-events-auto cursor-pointer">
-            {/* Wider transparent hit-area path for easy hovering/clicking */}
+          <g
+            key={conn.id}
+            className="group pointer-events-auto cursor-pointer"
+            onMouseEnter={() => setHoveredConnId(conn.id)}
+            onMouseLeave={() => setHoveredConnId(null)}
+            onClick={e => {
+              e.stopPropagation();
+              if (onSelectConnection) onSelectConnection(conn.id);
+            }}
+          >
+            {/* Hit testing fat path */}
             <path
               d={pathData}
               fill="none"
               stroke="transparent"
-              strokeWidth="16"
-              onClick={() => {
-                if (onDeleteConnection && confirm('Remove this connection line?')) {
-                  onDeleteConnection(conn.id);
-                }
-              }}
+              strokeWidth="20"
             />
-            {/* Visual smooth bezier path */}
+
+            {/* Selection highlight aura */}
+            {isSelected && (
+              <path
+                d={pathData}
+                fill="none"
+                stroke="#a855f7"
+                strokeWidth="7"
+                opacity="0.4"
+              />
+            )}
+
+            {/* Main visual bezier path */}
             <path
               d={pathData}
               fill="none"
               stroke={strokeColor}
-              strokeWidth="2.5"
-              strokeDasharray={conn.animated ? '6 4' : undefined}
+              strokeWidth={isSelected || isHovered ? '3.5' : '2.5'}
+              strokeDasharray={conn.style === 'dashed' || conn.animated ? '6 4' : undefined}
               className={conn.animated ? 'animate-[dash_15s_linear_infinite]' : ''}
               markerEnd={`url(#arrow-${colorKey})`}
-              opacity="0.85"
+              opacity={isSelected || isHovered ? '1' : '0.85'}
             />
-            {/* Start & End dot handles */}
-            <circle cx={start.x} cy={start.y} r="3.5" fill={strokeColor} />
+
+            {/* Connector Port Dots */}
+            <circle cx={start.x} cy={start.y} r="4" fill={strokeColor} />
+            <circle cx={end.x} cy={end.y} r="3" fill={strokeColor} />
+
+            {/* Quick delete button at midpoint on hover or selection */}
+            {(isHovered || isSelected) && onDeleteConnection && (
+              <g
+                transform={`translate(${midX - 10}, ${midY - 10})`}
+                onClick={e => {
+                  e.stopPropagation();
+                  onDeleteConnection(conn.id);
+                }}
+                className="cursor-pointer hover:scale-125 transition-transform"
+              >
+                <circle cx="10" cy="10" r="10" fill="#ef4444" />
+                <path
+                  d="M 6 6 L 14 14 M 14 6 L 6 14"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </g>
+            )}
           </g>
         );
       })}
 
-      {/* Pending user dragging connection */}
+      {/* Pending user dragging connection line */}
       {pendingConnection && (() => {
         const fromCard = cardMap.get(pendingConnection.fromId);
         if (!fromCard) return null;
@@ -171,7 +230,7 @@ export const ConnectionLines: React.FC<ConnectionLinesProps> = ({
           <path
             d={pathData}
             fill="none"
-            stroke="#ec4899"
+            stroke="#a855f7"
             strokeWidth="2.5"
             strokeDasharray="4 4"
             opacity="0.9"
