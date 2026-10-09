@@ -1,0 +1,71 @@
+import React from 'react';
+import { Rocket, BookOpen, Layers, CheckCircle } from 'lucide-react';
+
+interface BannerCardProps {
+  title: string;
+  subtitle: string;
+  tags?: { label: string; variant: 'green' | 'purple' | 'blue' }[];
+}
+
+export const BannerCard: React.FC<BannerCardProps> = ({
+  title,
+  subtitle,
+  tags = [
+    { label: 'Beginner', variant: 'green' },
+    { label: '12 Cards', variant: 'purple' },
+    { label: 'Progress 40%', variant: 'blue' },
+  ],
+}) => {
+  return (
+    <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-500/20 via-pink-400/20 to-indigo-500/20 p-5 border border-purple-200/50">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          {/* Python 3D Logo / Graphic */}
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-500 to-amber-400 p-0.5 shadow-md flex items-center justify-center flex-shrink-0">
+            <div className="w-full h-full bg-white/90 rounded-[14px] flex items-center justify-center font-black text-2xl tracking-tighter">
+              <span className="text-blue-500">Py</span>
+              <span className="text-amber-500">th</span>
+            </div>
+          </div>
+
+          {/* Banner Text */}
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">
+              {title}
+            </h1>
+            <p className="text-xs text-neutral-600 mt-1 max-w-sm">
+              {subtitle}
+            </p>
+
+            {/* Tags Row */}
+            <div className="flex items-center space-x-2 mt-3">
+              {tags.map((tag, i) => {
+                let badgeClass = 'bg-purple-100 text-purple-700 border-purple-200';
+                if (tag.variant === 'green') {
+                  badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                } else if (tag.variant === 'blue') {
+                  badgeClass = 'bg-sky-100 text-sky-700 border-sky-200';
+                }
+                return (
+                  <span
+                    key={i}
+                    className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${badgeClass} flex items-center space-x-1`}
+                  >
+                    <span>{tag.label}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Rocket Launch Graphic on the right */}
+        <div className="hidden sm:flex flex-col items-center justify-center pl-4 pr-2">
+          <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500/20 to-purple-600/30 flex items-center justify-center">
+            <Rocket className="w-8 h-8 text-pink-500 -rotate-45 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

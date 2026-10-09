@@ -1,0 +1,6 @@
+{
+  "name": "LearnCanvas",
+  "description": "Visual learning workspace for software developers with interactive cards, diagrams, mind maps, and AI text-to-canvas generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
