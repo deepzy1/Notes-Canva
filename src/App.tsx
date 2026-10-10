@@ -9,12 +9,12 @@ import { ShareModal } from './components/modals/ShareModal';
 import { TemplatesModal } from './components/modals/TemplatesModal';
 import { ShortcutsModal } from './components/modals/ShortcutsModal';
 import { ConfirmDialog } from './components/modals/ConfirmDialog';
+import { AuthModal } from './components/auth/AuthModal';
+import { ProfileModal } from './components/auth/ProfileModal';
 import { THEMES } from './constants/themes';
-import {
-  storageService,
-  DEFAULT_USER,
-  UserProfile,
-} from './services/storageService';
+import { storageService } from './services/storageService';
+import { authService } from './services/authService';
+import { User, AuthModalView } from './types/auth';
 import {
   CanvasCardItem,
   Connection,
@@ -26,12 +26,18 @@ import {
 } from './types/canvas';
 
 export default function App() {
-  // 1. Workspaces & Folders State
+  // 1. User Authentication State
+  const [currentUser, setCurrentUser] = useState<User | null>(() => authService.getCurrentUser());
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalView, setAuthModalView] = useState<AuthModalView>('login');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // 2. Workspaces & Folders State (User-Scoped)
   const [workspaces, setWorkspaces] = useState<Workspace[]>(() => storageService.getWorkspaces());
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string>(() => storageService.getActiveWorkspaceId());
   const [folders, setFolders] = useState<Folder[]>(() => storageService.getFolders());
   const [activeFolderId, setActiveFolderId] = useState<string>('python');
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => storageService.getUserProfile());
 
   // Derive active workspace
   const activeWorkspace = useMemo(() => {
@@ -43,14 +49,14 @@ export default function App() {
   const themeId = activeWorkspace.theme;
   const canvasName = activeWorkspace.name;
 
-  // 2. Editor Interaction State
+  // 3. Editor Interaction State
   const [activeTool, setActiveTool] = useState<ActiveTool>('select');
   const [zoom, setZoom] = useState<number>(1.0);
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [clipboard, setClipboard] = useState<CanvasCardItem[] | null>(null);
 
-  // 3. Modals State
+  // 4. Modals State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -70,7 +76,7 @@ export default function App() {
     onConfirm: () => {},
   });
 
-  // 4. Undo / Redo History Stack per workspace
+  // 5. Undo / Redo History Stack per workspace
   const [history, setHistory] = useState<{ cards: CanvasCardItem[]; connections: Connection[] }[]>([
     { cards, connections },
   ]);
@@ -85,10 +91,6 @@ export default function App() {
   useEffect(() => {
     storageService.saveFolders(folders);
   }, [folders]);
-
-  useEffect(() => {
-    storageService.saveUserProfile(userProfile);
-  }, [userProfile]);
 
   // Push history state
   const pushHistory = useCallback(
@@ -203,6 +205,22 @@ export default function App() {
   const handleUngroupSelected = () => {
     handleUpdateCards(
       cards.map(c => (selectedCardIds.includes(c.id) ? { ...c, groupId: undefined } : c))
+    );
+  };
+
+  const handleBringToFront = () => {
+    if (selectedCardIds.length === 0) return;
+    const maxZ = Math.max(10, ...cards.map(c => c.zIndex || 10));
+    handleUpdateCards(
+      cards.map(c => (selectedCardIds.includes(c.id) ? { ...c, zIndex: maxZ + 1 } : c))
+    );
+  };
+
+  const handleSendToBack = () => {
+    if (selectedCardIds.length === 0) return;
+    const minZ = Math.min(10, ...cards.map(c => c.zIndex || 10));
+    handleUpdateCards(
+      cards.map(c => (selectedCardIds.includes(c.id) ? { ...c, zIndex: Math.max(1, minZ - 1) } : c))
     );
   };
 
@@ -416,7 +434,7 @@ export default function App() {
         hasGlow: false,
         data: {
           comment: 'Verify edge cases before shipping!',
-          author: userProfile.name,
+          author: currentUser?.name || 'Developer',
         },
       };
     } else {
@@ -560,6 +578,8 @@ export default function App() {
         onDeleteFolder={handleDeleteFolder}
         onOpenAiAssistant={() => setIsAiDrawerOpen(true)}
         onOpenTemplates={() => setIsTemplatesModalOpen(true)}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* 2. Main Workspace Layout */}
@@ -570,9 +590,22 @@ export default function App() {
           onSearchChange={setSearchQuery}
           currentTheme={themeId}
           onSelectTheme={handleSelectTheme}
-          userProfile={userProfile}
-          onUpdateUserProfile={setUserProfile}
+          currentUser={currentUser}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
+          onOpenAuthModal={() => {
+            setAuthModalView('login');
+            setIsAuthModalOpen(true);
+          }}
+          onLogout={() => {
+            authService.logout();
+            setCurrentUser(null);
+            const guestWorkspaces = storageService.getWorkspaces();
+            setWorkspaces(guestWorkspaces);
+            setActiveWorkspaceId(guestWorkspaces[0]?.id || 'ws-default');
+            setFolders(storageService.getFolders());
+          }}
           onOpenAiAssistant={() => setIsAiDrawerOpen(true)}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(prev => !prev)}
         />
 
         {/* Canvas Toolbar with Shapes, Arrow, Group, Delete */}
@@ -596,6 +629,8 @@ export default function App() {
           onDeleteSelected={handleDeleteSelected}
           onGroupSelected={handleGroupSelected}
           onUngroupSelected={handleUngroupSelected}
+          onBringToFront={handleBringToFront}
+          onSendToBack={handleSendToBack}
         />
 
         {/* Infinite Interactive Canvas Workspace */}
@@ -674,6 +709,41 @@ export default function App() {
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
       />
+
+      {/* User Authentication Modal (Login / Sign Up / Forgot Password / Google) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        initialView={authModalView}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={user => {
+          setCurrentUser(user);
+          const userWorkspaces = storageService.getWorkspaces();
+          setWorkspaces(userWorkspaces);
+          setActiveWorkspaceId(storageService.getActiveWorkspaceId());
+          setFolders(storageService.getFolders());
+        }}
+      />
+
+      {/* User Profile & Account Settings Modal */}
+      {currentUser && (
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          user={currentUser}
+          workspacesCount={workspaces.length}
+          foldersCount={folders.length}
+          onClose={() => setIsProfileModalOpen(false)}
+          onUpdateUser={updated => setCurrentUser(updated)}
+          onLogout={() => {
+            authService.logout();
+            setCurrentUser(null);
+            setIsProfileModalOpen(false);
+            const guestWorkspaces = storageService.getWorkspaces();
+            setWorkspaces(guestWorkspaces);
+            setActiveWorkspaceId(guestWorkspaces[0]?.id || 'ws-default');
+            setFolders(storageService.getFolders());
+          }}
+        />
+      )}
 
       {/* Confirmation Dialog */}
       <ConfirmDialog

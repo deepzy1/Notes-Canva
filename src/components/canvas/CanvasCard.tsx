@@ -28,6 +28,7 @@ interface CanvasCardProps {
   ) => void;
   onContextMenu: (e: React.MouseEvent, cardId: string) => void;
   isEditingText: boolean;
+  onStartEditText?: (cardId: string) => void;
   children: React.ReactNode;
 }
 
@@ -56,6 +57,7 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
   onStartConnect,
   onContextMenu,
   isEditingText,
+  onStartEditText,
   children,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -82,6 +84,10 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
         zIndex,
       }}
       onClick={onSelect}
+      onDoubleClick={e => {
+        e.stopPropagation();
+        onStartEditText?.(card.id);
+      }}
       onContextMenu={e => {
         e.preventDefault();
         e.stopPropagation();
@@ -102,6 +108,20 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartRotate(e, card.id);
             }}
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartRotate(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id
+                );
+              }
+            }}
             className="absolute -top-7 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-2 border-purple-600 rounded-full shadow-md cursor-grab active:cursor-grabbing pointer-events-auto flex items-center justify-center hover:scale-125 transition-transform"
             title="Rotate element"
           >
@@ -116,7 +136,22 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartResize(e, card.id, 'nw');
             }}
-            className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-purple-600 rounded-xs cursor-nwse-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartResize(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id,
+                  'nw'
+                );
+              }
+            }}
+            className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-white border-2 border-purple-600 rounded-xs cursor-nwse-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
           />
           {/* Top-Center (N) */}
           <div
@@ -124,7 +159,22 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartResize(e, card.id, 'n');
             }}
-            className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-purple-600 rounded-xs cursor-ns-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartResize(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id,
+                  'n'
+                );
+              }
+            }}
+            className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-white border-2 border-purple-600 rounded-xs cursor-ns-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
           />
           {/* Top-Right (NE) */}
           <div
@@ -132,7 +182,22 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartResize(e, card.id, 'ne');
             }}
-            className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-purple-600 rounded-xs cursor-nesw-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartResize(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id,
+                  'ne'
+                );
+              }
+            }}
+            className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-white border-2 border-purple-600 rounded-xs cursor-nesw-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
           />
           {/* Mid-Right (E) */}
           <div
@@ -140,7 +205,22 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartResize(e, card.id, 'e');
             }}
-            className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3 h-3 bg-white border-2 border-purple-600 rounded-xs cursor-ew-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartResize(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id,
+                  'e'
+                );
+              }
+            }}
+            className="absolute top-1/2 -right-1.5 -translate-y-1/2 w-3.5 h-3.5 bg-white border-2 border-purple-600 rounded-xs cursor-ew-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
           />
           {/* Bottom-Right (SE) */}
           <div
@@ -148,7 +228,22 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartResize(e, card.id, 'se');
             }}
-            className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-purple-600 rounded-xs cursor-nwse-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartResize(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id,
+                  'se'
+                );
+              }
+            }}
+            className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-white border-2 border-purple-600 rounded-xs cursor-nwse-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
           />
           {/* Bottom-Center (S) */}
           <div
@@ -156,7 +251,22 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartResize(e, card.id, 's');
             }}
-            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-2 border-purple-600 rounded-xs cursor-ns-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartResize(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id,
+                  's'
+                );
+              }
+            }}
+            className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-white border-2 border-purple-600 rounded-xs cursor-ns-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
           />
           {/* Bottom-Left (SW) */}
           <div
@@ -164,7 +274,22 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartResize(e, card.id, 'sw');
             }}
-            className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-purple-600 rounded-xs cursor-nesw-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartResize(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id,
+                  'sw'
+                );
+              }
+            }}
+            className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-white border-2 border-purple-600 rounded-xs cursor-nesw-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
           />
           {/* Mid-Left (W) */}
           <div
@@ -172,7 +297,22 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
               e.stopPropagation();
               onStartResize(e, card.id, 'w');
             }}
-            className="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3 h-3 bg-white border-2 border-purple-600 rounded-xs cursor-ew-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
+            onTouchStart={e => {
+              e.stopPropagation();
+              if (e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartResize(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                  } as any,
+                  card.id,
+                  'w'
+                );
+              }
+            }}
+            className="absolute top-1/2 -left-1.5 -translate-y-1/2 w-3.5 h-3.5 bg-white border-2 border-purple-600 rounded-xs cursor-ew-resize pointer-events-auto shadow-xs hover:scale-125 transition-transform"
           />
         </div>
       )}
@@ -247,6 +387,21 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
           {!isEditingText && (
             <div
               onMouseDown={e => onStartDrag(e, card.id)}
+              onTouchStart={e => {
+                if (e.touches.length === 1) {
+                  const t = e.touches[0];
+                  onStartDrag(
+                    {
+                      clientX: t.clientX,
+                      clientY: t.clientY,
+                      stopPropagation: () => e.stopPropagation(),
+                      shiftKey: false,
+                      ctrlKey: false,
+                    } as any,
+                    card.id
+                  );
+                }
+              }}
               className="h-3 w-full cursor-grab active:cursor-grabbing flex items-center justify-center opacity-0 group-hover:opacity-60 transition-opacity mb-1"
             >
               <div className="w-10 h-1 bg-neutral-300 rounded-full" />
@@ -258,6 +413,21 @@ export const CanvasCard: React.FC<CanvasCardProps> = ({
             onMouseDown={e => {
               if (!isEditingText) {
                 onStartDrag(e, card.id);
+              }
+            }}
+            onTouchStart={e => {
+              if (!isEditingText && e.touches.length === 1) {
+                const t = e.touches[0];
+                onStartDrag(
+                  {
+                    clientX: t.clientX,
+                    clientY: t.clientY,
+                    stopPropagation: () => e.stopPropagation(),
+                    shiftKey: false,
+                    ctrlKey: false,
+                  } as any,
+                  card.id
+                );
               }
             }}
             className="relative z-10 w-full h-full"

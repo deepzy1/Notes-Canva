@@ -23,6 +23,8 @@ import {
   Star,
   Keyboard,
   HelpCircle,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { ActiveTool, ShapeSubtype } from '../../types/canvas';
 
@@ -46,6 +48,8 @@ interface CanvasToolbarProps {
   onDeleteSelected: () => void;
   onGroupSelected: () => void;
   onUngroupSelected: () => void;
+  onBringToFront?: () => void;
+  onSendToBack?: () => void;
 }
 
 export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
@@ -68,6 +72,8 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
   onDeleteSelected,
   onGroupSelected,
   onUngroupSelected,
+  onBringToFront,
+  onSendToBack,
 }) => {
   const [showShapeMenu, setShowShapeMenu] = useState(false);
   const [showMoreTools, setShowMoreTools] = useState(false);
@@ -102,7 +108,7 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
       </div>
 
       {/* Center Tool Pills */}
-      <div className="flex items-center space-x-1 p-1 bg-neutral-100/80 rounded-2xl border border-neutral-200/60 shadow-xs">
+      <div className="flex items-center space-x-1 p-1 bg-neutral-100/80 rounded-2xl border border-neutral-200/60 shadow-xs overflow-x-auto max-w-[50vw] sm:max-w-none no-scrollbar">
         {/* Select Tool */}
         <button
           onClick={() => onSelectTool('select')}
@@ -322,6 +328,24 @@ export const CanvasToolbar: React.FC<CanvasToolbarProps> = ({
             >
               <Ungroup className="w-3.5 h-3.5" />
             </button>
+            {onBringToFront && (
+              <button
+                onClick={onBringToFront}
+                className="p-1 text-purple-700 hover:bg-purple-100 rounded cursor-pointer"
+                title="Bring Forward / To Front"
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {onSendToBack && (
+              <button
+                onClick={onSendToBack}
+                className="p-1 text-purple-700 hover:bg-purple-100 rounded cursor-pointer"
+                title="Send Backward / To Back"
+              >
+                <ArrowDown className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               onClick={onDeleteSelected}
               className="p-1 text-red-600 hover:bg-red-50 rounded cursor-pointer"

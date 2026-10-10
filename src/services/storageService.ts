@@ -1,93 +1,20 @@
 import { CanvasCardItem, Connection, ThemeId, Folder, Workspace } from '../types/canvas';
 import { INITIAL_CARDS, INITIAL_CONNECTIONS, DEFAULT_FOLDERS } from '../constants/pythonBasicsData';
-
-const STORAGE_KEYS = {
-  WORKSPACES: 'learncanvas_workspaces',
-  ACTIVE_WORKSPACE_ID: 'learncanvas_active_ws_id',
-  FOLDERS: 'learncanvas_folders',
-  ACTIVE_FOLDER: 'learncanvas_active_folder',
-  USER_PROFILE: 'learncanvas_user_profile',
-  THEME: 'learncanvas_theme',
-};
-
-export interface UserProfile {
-  name: string;
-  email: string;
-  avatarUrl: string;
-  isLoggedIn: boolean;
-}
-
-export const DEFAULT_USER: UserProfile = {
-  name: 'Deepak R.',
-  email: 'deepakhumdee@gmail.com',
-  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-  isLoggedIn: true,
-};
-
-const DEFAULT_WORKSPACES: Workspace[] = [
-  {
-    id: 'ws-python-basics',
-    name: 'Python Basics',
-    folderId: 'python',
-    cards: INITIAL_CARDS,
-    connections: INITIAL_CONNECTIONS,
-    theme: 'instagram',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'ws-fastapi',
-    name: 'FastAPI REST Architecture',
-    folderId: 'fastapi',
-    cards: [
-      {
-        id: 'fa-banner-seed',
-        type: 'banner',
-        x: 60,
-        y: 50,
-        width: 600,
-        title: 'FastAPI REST Architecture',
-        accent: 'emerald',
-        hasGlow: true,
-        data: {
-          subtitle: 'High performance web framework with automatic OpenAPI docs',
-          tags: [
-            { label: 'FastAPI', variant: 'green' },
-            { label: 'Async', variant: 'purple' },
-            { label: 'Pydantic', variant: 'blue' },
-          ],
-        },
-      },
-      {
-        id: 'fa-code-seed',
-        type: 'code',
-        x: 60,
-        y: 230,
-        width: 320,
-        title: 'Async Route Handler',
-        badgeNumber: 1,
-        accent: 'blue',
-        hasGlow: false,
-        data: {
-          description: 'Non-blocking I/O endpoint with Pydantic body validation.',
-          language: 'python',
-          code: `from fastapi import FastAPI\n\napp = FastAPI()\n\n@app.get("/api/health")\nasync def health():\n    return {"status": "healthy"}`,
-          output: '{"status": "healthy"}',
-        },
-      },
-    ],
-    connections: [],
-    theme: 'nature',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+import { authService } from './authService';
 
 export const storageService = {
-  // --- Workspace CRUD ---
+  // Helper to get user-specific storage key
+  getUserKey(baseKey: string): string {
+    const user = authService.getCurrentUser();
+    const userId = user ? user.id : 'guest';
+    return `${baseKey}_${userId}`;
+  },
+
+  // --- Workspace CRUD (User-Scoped) ---
   getWorkspaces(): Workspace[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.WORKSPACES);
+      const userKey = this.getUserKey('learncanvas_workspaces');
+      const data = localStorage.getItem(userKey);
       if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -97,12 +24,92 @@ export const storageService = {
     } catch (e) {
       console.error('Failed to load workspaces', e);
     }
-    return DEFAULT_WORKSPACES;
+
+    // Default workspaces for this user
+    const user = authService.getCurrentUser();
+    const isSeedUser = user?.id === 'user-default-deepak';
+
+    const defaultWorkspaces: Workspace[] = isSeedUser
+      ? [
+          {
+            id: 'ws-python-basics',
+            name: 'Python Basics',
+            folderId: 'python',
+            cards: INITIAL_CARDS,
+            connections: INITIAL_CONNECTIONS,
+            theme: 'instagram',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'ws-fastapi',
+            name: 'FastAPI REST Architecture',
+            folderId: 'fastapi',
+            cards: [
+              {
+                id: 'fa-banner-seed',
+                type: 'banner',
+                x: 60,
+                y: 50,
+                width: 600,
+                title: 'FastAPI REST Architecture',
+                accent: 'emerald',
+                hasGlow: true,
+                data: {
+                  subtitle: 'High performance web framework with automatic OpenAPI docs',
+                  tags: [
+                    { label: 'FastAPI', variant: 'green' },
+                    { label: 'Async', variant: 'purple' },
+                    { label: 'Pydantic', variant: 'blue' },
+                  ],
+                },
+              },
+            ],
+            connections: [],
+            theme: 'nature',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ]
+      : [
+          {
+            id: `ws-${Date.now()}`,
+            name: `${user?.name || 'My'} Workspace`,
+            folderId: 'projects',
+            cards: [
+              {
+                id: `card-welcome-${Date.now()}`,
+                type: 'banner',
+                x: 60,
+                y: 50,
+                width: 580,
+                title: `Welcome, ${user?.name || 'Developer'}!`,
+                accent: 'purple',
+                hasGlow: true,
+                data: {
+                  subtitle: 'Your personal visual learning canvas. Drag, sketch, connect, or generate with AI.',
+                  tags: [
+                    { label: 'Personal', variant: 'purple' },
+                    { label: 'Interactive', variant: 'green' },
+                  ],
+                },
+              },
+            ],
+            connections: [],
+            theme: 'instagram',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+
+    this.saveWorkspaces(defaultWorkspaces);
+    return defaultWorkspaces;
   },
 
   saveWorkspaces(workspaces: Workspace[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.WORKSPACES, JSON.stringify(workspaces));
+      const userKey = this.getUserKey('learncanvas_workspaces');
+      localStorage.setItem(userKey, JSON.stringify(workspaces));
     } catch (e) {
       console.error('Failed to save workspaces', e);
     }
@@ -110,15 +117,18 @@ export const storageService = {
 
   getActiveWorkspaceId(): string {
     try {
-      const id = localStorage.getItem(STORAGE_KEYS.ACTIVE_WORKSPACE_ID);
+      const userKey = this.getUserKey('learncanvas_active_ws_id');
+      const id = localStorage.getItem(userKey);
       if (id) return id;
     } catch (e) {}
-    return 'ws-python-basics';
+    const workspaces = this.getWorkspaces();
+    return workspaces[0]?.id || 'ws-default';
   },
 
   setActiveWorkspaceId(id: string): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_WORKSPACE_ID, id);
+      const userKey = this.getUserKey('learncanvas_active_ws_id');
+      localStorage.setItem(userKey, id);
     } catch (e) {}
   },
 
@@ -208,36 +218,21 @@ export const storageService = {
     this.saveWorkspaces(workspaces);
   },
 
-  updateWorkspaceData(
-    id: string,
-    cards: CanvasCardItem[],
-    connections: Connection[],
-    theme?: ThemeId
-  ): void {
-    const workspaces = this.getWorkspaces().map(w => {
-      if (w.id === id) {
-        return {
-          ...w,
-          cards,
-          connections,
-          theme: theme || w.theme,
-          updatedAt: new Date().toISOString(),
-        };
-      }
-      return w;
-    });
+  updateWorkspaceData(id: string, cards: CanvasCardItem[], connections: Connection[]): void {
+    const workspaces = this.getWorkspaces().map(w =>
+      w.id === id ? { ...w, cards, connections, updatedAt: new Date().toISOString() } : w
+    );
     this.saveWorkspaces(workspaces);
   },
 
-  // --- Folder CRUD ---
+  // --- Folder CRUD (User-Scoped) ---
   getFolders(): Folder[] {
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.FOLDERS);
+      const userKey = this.getUserKey('learncanvas_folders');
+      const data = localStorage.getItem(userKey);
       if (data) {
         const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
       console.error('Failed to load folders', e);
@@ -247,7 +242,8 @@ export const storageService = {
 
   saveFolders(folders: Folder[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(folders));
+      const userKey = this.getUserKey('learncanvas_folders');
+      localStorage.setItem(userKey, JSON.stringify(folders));
     } catch (e) {
       console.error('Failed to save folders', e);
     }
@@ -291,39 +287,10 @@ export const storageService = {
     return true;
   },
 
-  // --- Theme & Profile ---
-  getTheme(): ThemeId {
-    try {
-      const theme = localStorage.getItem(STORAGE_KEYS.THEME) as ThemeId;
-      if (theme) return theme;
-    } catch (e) {}
-    return 'instagram';
-  },
-
-  saveTheme(theme: ThemeId): void {
-    try {
-      localStorage.setItem(STORAGE_KEYS.THEME, theme);
-    } catch (e) {}
-  },
-
-  getUserProfile(): UserProfile {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.USER_PROFILE);
-      if (data) return JSON.parse(data);
-    } catch (e) {}
-    return DEFAULT_USER;
-  },
-
-  saveUserProfile(profile: UserProfile): void {
-    try {
-      localStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
-    } catch (e) {}
-  },
-
+  // Reset current user's workspace back to default
   resetToDefault(): Workspace {
-    localStorage.removeItem(STORAGE_KEYS.WORKSPACES);
-    localStorage.removeItem(STORAGE_KEYS.ACTIVE_WORKSPACE_ID);
-    localStorage.removeItem(STORAGE_KEYS.FOLDERS);
-    return DEFAULT_WORKSPACES[0];
+    const userKey = this.getUserKey('learncanvas_workspaces');
+    localStorage.removeItem(userKey);
+    return this.getWorkspaces()[0];
   },
 };

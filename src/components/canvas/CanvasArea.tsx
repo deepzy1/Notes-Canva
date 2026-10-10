@@ -112,6 +112,63 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
   // Spacebar panning tracking
   const [isSpacePressed, setIsSpacePressed] = useState(false);
 
+  // Touch pinch-zoom & pan tracking
+  const [touchStartDist, setTouchStartDist] = useState<number | null>(null);
+  const [touchStartZoom, setTouchStartZoom] = useState<number>(1);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      setTouchStartDist(dist);
+      setTouchStartZoom(zoom);
+      setIsPanning(false);
+    } else if (e.touches.length === 1) {
+      const isBackground =
+        e.target === containerRef.current ||
+        (e.target as HTMLElement).classList.contains('canvas-background');
+
+      if (isBackground) {
+        setEditingCardId(null);
+        setSelectedConnectionId(null);
+        setIsPanning(true);
+        setPanStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
+      }
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && touchStartDist !== null) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const ratio = currentDist / touchStartDist;
+      const nextZoom = Math.min(2.5, Math.max(0.3, touchStartZoom * ratio));
+      onZoomChange(nextZoom);
+    } else if (e.touches.length === 1) {
+      const clientX = e.touches[0].clientX;
+      const clientY = e.touches[0].clientY;
+
+      if (isPanning) {
+        setPan({
+          x: clientX - panStart.x,
+          y: clientY - panStart.y,
+        });
+      } else if (isDraggingCards || resizeState || rotateState) {
+        handleMouseMove({ clientX, clientY } as any);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStartDist(null);
+    setIsPanning(false);
+    setIsDraggingCards(false);
+    setResizeState(null);
+    setRotateState(null);
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !(e.target as HTMLElement).matches('input, textarea, [contenteditable="true"]')) {
@@ -870,7 +927,28 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
           />
         );
       case 'note':
-        return <NoteCard title={card.title} bullets={card.data?.bullets} />;
+        return (
+          <NoteCard
+            title={card.title}
+            bullets={card.data?.bullets}
+            onUpdate={updated => {
+              onUpdateCards(
+                cards.map(c =>
+                  c.id === card.id
+                    ? {
+                        ...c,
+                        title: updated.title ?? c.title,
+                        data: {
+                          ...c.data,
+                          bullets: updated.bullets ?? c.data?.bullets,
+                        },
+                      }
+                    : c
+                )
+              );
+            }}
+          />
+        );
       case 'tasks':
         return <TasksCard title={card.title} items={card.data?.items} />;
       case 'resources':
@@ -893,6 +971,21 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
             title={card.title}
             comment={card.data?.comment}
             author={card.data?.author}
+            onUpdate={updated => {
+              onUpdateCards(
+                cards.map(c =>
+                  c.id === card.id
+                    ? {
+                        ...c,
+                        data: {
+                          ...c.data,
+                          comment: updated.comment ?? c.data?.comment,
+                        },
+                      }
+                    : c
+                )
+              );
+            }}
           />
         );
       default:
@@ -918,6 +1011,9 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       onContextMenu={e => {
         e.preventDefault();
         setContextMenu({
@@ -1027,6 +1123,7 @@ export const CanvasArea: React.FC<CanvasAreaProps> = ({
                     });
                   }}
                   isEditingText={editingCardId === card.id}
+                  onStartEditText={() => setEditingCardId(card.id)}
                 >
                   {renderCardContent(card)}
                 </CanvasCard>
